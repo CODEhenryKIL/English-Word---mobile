@@ -4,27 +4,29 @@ import { useState, useEffect, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { getWordbook, getWords, toggleStarred } from "@/actions/wordbook-actions";
 import { completeStudySession } from "@/actions/study-actions";
-import { getWrongAnswerWords, getMaxTestSession } from "@/actions/test-actions";
+import { getWrongAnswerWords } from "@/actions/test-actions";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     ArrowLeft,
     Star,
-    Eye,
-    EyeOff,
+    Type,
+    BookA,
     ChevronLeft,
     ChevronRight,
     CheckCircle2,
     Loader2,
     BookOpen,
     ClipboardCheck,
-    Filter,
 } from "lucide-react";
-import { getStepLabel, getIntervalDescription } from "@/lib/spaced-repetition";
+import { getStepLabel } from "@/lib/spaced-repetition";
 import type { Word, Wordbook } from "@/types/database";
 import Link from "next/link";
 import { toast } from "sonner";
+
+// 가리기 모드: none(다 보임), word(단어+발음 가림), meaning(의미 가림)
+type HideMode = "none" | "word" | "meaning";
 
 export default function WordbookPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -34,7 +36,7 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
     const [wrongWords, setWrongWords] = useState<Word[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [redFilterOn, setRedFilterOn] = useState(false);
+    const [hideMode, setHideMode] = useState<HideMode>("none");
     const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
     const [subTab, setSubTab] = useState<"all" | "starred" | "wrong">("all");
     const [touchStartX, setTouchStartX] = useState(0);
@@ -78,6 +80,28 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
 
     const currentWord = filteredWords[currentIndex];
 
+    // 특정 영역이 가려져 있는지 확인
+    function isHidden(area: "word" | "meaning"): boolean {
+        if (hideMode === "none") return false;
+        if (hideMode !== area) return false;
+        // 이미 공개된 경우
+        if (currentWord && revealedIds.has(currentWord.id + "-" + area)) return false;
+        return true;
+    }
+
+    // 클릭으로 공개
+    function handleReveal(area: string) {
+        setRevealedIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(area)) {
+                next.delete(area);
+            } else {
+                next.add(area);
+            }
+            return next;
+        });
+    }
+
     // 별표 토글
     async function handleToggleStar() {
         if (!currentWord) return;
@@ -89,24 +113,14 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
         toast(newStarred ? "⭐ 어려운 단어에 추가됨" : "별표 해제됨");
     }
 
-    // 적색 필터 토글
-    function handleToggleRedFilter() {
-        setRedFilterOn(!redFilterOn);
+    // 가리기 모드 토글
+    function toggleHideMode(mode: HideMode) {
+        if (hideMode === mode) {
+            setHideMode("none");
+        } else {
+            setHideMode(mode);
+        }
         setRevealedIds(new Set());
-    }
-
-    // 텍스트 탭 → 일시적 공개
-    function handleReveal(wordId: string) {
-        if (!redFilterOn) return;
-        setRevealedIds((prev) => {
-            const next = new Set(prev);
-            if (next.has(wordId)) {
-                next.delete(wordId);
-            } else {
-                next.add(wordId);
-            }
-            return next;
-        });
     }
 
     // 카드 네비게이션
@@ -168,6 +182,10 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
             </div>
         );
     }
+
+    // 가림 스타일 (블러 + 배경 커버)
+    const hiddenStyle = "select-none blur-md opacity-30 transition-all cursor-pointer";
+    const visibleStyle = "transition-all cursor-pointer";
 
     return (
         <div className="flex flex-col min-h-dvh bg-gradient-to-b from-background to-secondary/20">
@@ -256,7 +274,7 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
 
                                 {/* 단어 카드 */}
                                 <div
-                                    className={`swipe-card ${isSwiping ? "swiping" : ""} relative rounded-2xl bg-card/90 backdrop-blur border border-border/30 p-6 min-h-[340px] flex flex-col`}
+                                    className={`swipe-card ${isSwiping ? "swiping" : ""} relative rounded-2xl bg-card/90 backdrop-blur border border-border/30 p-6 min-h-[280px] flex flex-col`}
                                     style={{ transform: `translateX(${swipeOffset}px)` }}
                                     onTouchStart={handleTouchStart}
                                     onTouchMove={handleTouchMove}
@@ -277,49 +295,47 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                                                 />
                                             </button>
 
-                                            {/* 단어 */}
+                                            {/* 단어 + 발음 */}
                                             <div className="text-center flex-1 flex flex-col justify-center">
-                                                <h2 className="text-3xl font-bold text-indigo-400 mb-1">
-                                                    {currentWord.word}
-                                                </h2>
+                                                <div
+                                                    className={isHidden("word") ? hiddenStyle : visibleStyle}
+                                                    onClick={() => isHidden("word") && handleReveal(currentWord.id + "-word")}
+                                                >
+                                                    <h2 className="text-3xl font-bold text-indigo-400 mb-1">
+                                                        {currentWord.word}
+                                                    </h2>
 
-                                                {currentWord.pronunciation && (
-                                                    <p className="text-sm text-muted-foreground mb-1">
-                                                        [{currentWord.pronunciation}]
-                                                    </p>
-                                                )}
+                                                    {currentWord.pronunciation && (
+                                                        <p className="text-sm text-muted-foreground mb-1">
+                                                            [{currentWord.pronunciation}]
+                                                        </p>
+                                                    )}
+                                                </div>
 
                                                 {currentWord.part_of_speech && (
-                                                    <Badge variant="secondary" className="mx-auto text-[10px] mb-4">
+                                                    <Badge variant="secondary" className="mx-auto text-[10px] mb-4 mt-2">
                                                         {currentWord.part_of_speech}
                                                     </Badge>
                                                 )}
 
-                                                {/* 의미 (적색 필터 적용 대상) */}
+                                                {/* 의미 */}
                                                 <div
-                                                    className={`mt-2 p-4 rounded-xl bg-secondary/30 ${redFilterOn && !revealedIds.has(currentWord.id + "-meaning")
-                                                        ? "red-filter"
-                                                        : ""
-                                                        }`}
-                                                    onClick={() => handleReveal(currentWord.id + "-meaning")}
+                                                    className={`mt-2 p-4 rounded-xl bg-secondary/30 ${isHidden("meaning") ? hiddenStyle : visibleStyle}`}
+                                                    onClick={() => isHidden("meaning") && handleReveal(currentWord.id + "-meaning")}
                                                 >
                                                     <p className="text-lg font-medium">{currentWord.meaning}</p>
                                                 </div>
-
                                             </div>
                                         </>
                                     )}
                                 </div>
 
-                                {/* 하단 세부 정보 영역 */}
+                                {/* 하단 세부 정보 영역 — 항상 표시 */}
                                 {currentWord && (currentWord.root_affix || currentWord.etymology || currentWord.memo) && (
                                     <div className="mt-3 rounded-xl bg-card/70 border border-border/20 divide-y divide-border/20 overflow-hidden">
                                         {/* 어근 구성 */}
                                         {currentWord.root_affix && (
-                                            <div
-                                                className={`px-4 py-3 ${redFilterOn && !revealedIds.has(currentWord.id + "-root") ? "red-filter" : ""}`}
-                                                onClick={() => handleReveal(currentWord.id + "-root")}
-                                            >
+                                            <div className="px-4 py-3">
                                                 <p className="text-[10px] font-semibold text-indigo-400/70 uppercase tracking-wider mb-1">어근 구성</p>
                                                 <p className="text-sm text-foreground/80">{currentWord.root_affix}</p>
                                             </div>
@@ -327,10 +343,7 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
 
                                         {/* 어원 설명 */}
                                         {currentWord.etymology && (
-                                            <div
-                                                className={`px-4 py-3 ${redFilterOn && !revealedIds.has(currentWord.id + "-etym") ? "red-filter" : ""}`}
-                                                onClick={() => handleReveal(currentWord.id + "-etym")}
-                                            >
+                                            <div className="px-4 py-3">
                                                 <p className="text-[10px] font-semibold text-purple-400/70 uppercase tracking-wider mb-1">어원 설명</p>
                                                 <p className="text-sm text-foreground/80">{currentWord.etymology}</p>
                                             </div>
@@ -346,16 +359,16 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                                     </div>
                                 )}
 
-                                {/* 좌우 네비게이션 */}
-                                <div className="flex items-center justify-between mt-4 px-4">
+                                {/* 좌우 네비게이션 — 버튼 크게 */}
+                                <div className="flex items-center justify-between mt-5">
                                     <Button
-                                        variant="ghost"
+                                        variant="outline"
                                         size="icon"
-                                        className="h-12 w-12 rounded-full"
+                                        className="h-16 w-16 rounded-2xl border-border/40"
                                         disabled={currentIndex === 0}
                                         onClick={goPrev}
                                     >
-                                        <ChevronLeft className="w-6 h-6" />
+                                        <ChevronLeft className="w-8 h-8" />
                                     </Button>
 
                                     <div className="flex gap-1">
@@ -377,42 +390,50 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                                     </div>
 
                                     <Button
-                                        variant="ghost"
+                                        variant="outline"
                                         size="icon"
-                                        className="h-12 w-12 rounded-full"
+                                        className="h-16 w-16 rounded-2xl border-border/40"
                                         disabled={currentIndex >= filteredWords.length - 1}
                                         onClick={goNext}
                                     >
-                                        <ChevronRight className="w-6 h-6" />
+                                        <ChevronRight className="w-8 h-8" />
                                     </Button>
                                 </div>
                             </>
                         )}
                     </div>
 
-                    {/* 하단 툴바 */}
+                    {/* 하단 툴바 — 단어 가리기 / 의미 가리기 버튼 */}
                     <div className="sticky bottom-0 px-4 py-3 bg-background/90 backdrop-blur-xl border-t border-border/30 safe-bottom">
-                        <div className="flex items-center justify-center gap-4">
+                        <div className="flex items-center justify-center gap-3">
                             <Button
-                                variant={redFilterOn ? "default" : "outline"}
+                                variant={hideMode === "word" ? "default" : "outline"}
                                 size="sm"
-                                className={`gap-2 rounded-full px-5 ${redFilterOn
-                                    ? "bg-red-600 hover:bg-red-700 text-white"
+                                className={`gap-2 rounded-full px-4 ${hideMode === "word"
+                                    ? "bg-indigo-600 hover:bg-indigo-700 text-white"
                                     : ""
                                     }`}
-                                onClick={handleToggleRedFilter}
+                                onClick={() => toggleHideMode("word")}
                             >
-                                {redFilterOn ? (
-                                    <EyeOff className="w-4 h-4" />
-                                ) : (
-                                    <Eye className="w-4 h-4" />
-                                )}
-                                {redFilterOn ? "필터 끄기" : "적색 필터"}
+                                <Type className="w-4 h-4" />
+                                단어 가리기
+                            </Button>
+                            <Button
+                                variant={hideMode === "meaning" ? "default" : "outline"}
+                                size="sm"
+                                className={`gap-2 rounded-full px-4 ${hideMode === "meaning"
+                                    ? "bg-purple-600 hover:bg-purple-700 text-white"
+                                    : ""
+                                    }`}
+                                onClick={() => toggleHideMode("meaning")}
+                            >
+                                <BookA className="w-4 h-4" />
+                                의미 가리기
                             </Button>
                         </div>
                     </div>
                 </TabsContent>
             </Tabs>
-        </div >
+        </div>
     );
 }
