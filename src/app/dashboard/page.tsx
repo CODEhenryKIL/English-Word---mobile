@@ -23,9 +23,6 @@ import {
 } from "lucide-react";
 import { MAX_STEPS, getIntervalDays } from "@/lib/spaced-repetition";
 
-// 단계별 간격 라벨
-const STEP_INTERVALS = ["D-Day", "+2일", "+1일", "+5일", "+23일", "+180일"];
-
 export default function DashboardPage() {
     const router = useRouter();
     const [wordbooks, setWordbooks] = useState<any[]>([]);
@@ -186,14 +183,33 @@ export default function DashboardPage() {
                                         </Button>
                                     </div>
 
-                                    {/* 학습 단계 표시 (1차 ~ 6차) */}
-                                    <div className="mt-3 grid grid-cols-6 gap-1">
+                                    {/* 학습 단계 표시 (1차 ~ 5차) */}
+                                    <div className="mt-3 grid grid-cols-5 gap-1.5">
                                         {Array.from({ length: MAX_STEPS }, (_, i) => {
-                                            const step = i + 1; // 1~6
+                                            const step = i + 1; // 1~5
                                             const isCompleted = currentStep >= step;
                                             const isNext = currentStep === step - 1 && !isAllDone;
+
+                                            // 완료된 날짜
                                             const completionDate = getStepCompletionDate(wb.id, step);
-                                            const nextDueForStep = step <= 5 ? getNextDueDate(wb.id) : null;
+
+                                            // 다음 차수의 예정일: 직전 차수 완료 후 계산
+                                            let scheduledDate: string | null = null;
+                                            if (isNext && step >= 2) {
+                                                // 직전 차수(step-1)의 완료일 + 간격
+                                                const prevDate = getStepCompletionDate(wb.id, step - 1);
+                                                if (prevDate) {
+                                                    const interval = getIntervalDays(step - 1);
+                                                    if (interval > 0) {
+                                                        const d = new Date(prevDate + "T00:00:00");
+                                                        d.setDate(d.getDate() + interval);
+                                                        scheduledDate = `${d.getMonth() + 1}/${d.getDate()}`;
+                                                    }
+                                                }
+                                            }
+
+                                            // 간격 라벨
+                                            const intervalLabels = ["D-Day", "+1일", "+1일", "+5일", "+180일"];
 
                                             return (
                                                 <div
@@ -221,19 +237,25 @@ export default function DashboardPage() {
                                                             <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center">
                                                                 <Check className="w-3 h-3 text-white" />
                                                             </div>
-                                                        ) : step <= 6 ? (
-                                                            <span className="text-[9px] text-muted-foreground/60">
-                                                                {STEP_INTERVALS[step - 1]}
-                                                            </span>
                                                         ) : (
-                                                            <span className="text-[9px] text-muted-foreground/40">—</span>
+                                                            <span className="text-[9px] text-muted-foreground/60">
+                                                                {intervalLabels[step - 1]}
+                                                            </span>
                                                         )}
                                                     </div>
 
-                                                    {/* 날짜 */}
-                                                    <span className={`text-[8px] mt-0.5 ${isCompleted ? "text-indigo-400/60" : "text-transparent"
+                                                    {/* 날짜: 완료일 또는 예정일 */}
+                                                    <span className={`text-[8px] mt-0.5 ${isCompleted
+                                                        ? "text-indigo-400/60"
+                                                        : isNext && scheduledDate
+                                                            ? "text-amber-400"
+                                                            : "text-transparent"
                                                         }`}>
-                                                        {completionDate ? formatDate(completionDate) : "—"}
+                                                        {isCompleted && completionDate
+                                                            ? formatDate(completionDate)
+                                                            : isNext && scheduledDate
+                                                                ? scheduledDate
+                                                                : "—"}
                                                     </span>
                                                 </div>
                                             );
