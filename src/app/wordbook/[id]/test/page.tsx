@@ -24,9 +24,12 @@ import {
     AlertTriangle,
     Keyboard,
     BookOpen,
+    Circle, // O
+    XCircle, // X
 } from "lucide-react";
 import type { Word } from "@/types/database";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 
 type TestMode = "word" | "meaning"; // word: 의미 보고 단어 맞추기, meaning: 단어 보고 의미 맞추기
 
@@ -42,6 +45,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
     const [currentIndex, setCurrentIndex] = useState(0);
     const [wrongIds, setWrongIds] = useState<string[]>([]);
     const [showAnswer, setShowAnswer] = useState(false);
+    const [userAnswer, setUserAnswer] = useState(""); // 사용자 입력 답안
     const [testFinished, setTestFinished] = useState(false);
     const [showModeSelector, setShowModeSelector] = useState(true);
     const [showSaveDialog, setShowSaveDialog] = useState(false);
@@ -65,6 +69,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         setCurrentIndex(0);
         setWrongIds([]);
         setShowAnswer(false);
+        setUserAnswer("");
         setTestFinished(false);
         setShowModeSelector(false);
     }
@@ -94,6 +99,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
         } else {
             setCurrentIndex(currentIndex + 1);
             setShowAnswer(false);
+            setUserAnswer("");
         }
     }
 
@@ -231,13 +237,46 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                                 <p className="text-sm text-muted-foreground">[{currentWord.pronunciation}]</p>
                             )}
 
-                            {/* 정답 표시 */}
-                            {showAnswer && (
-                                <div className="mt-6 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 animate-fade-in">
-                                    <p className="text-xs text-indigo-400 mb-1">정답</p>
-                                    <p className="text-xl font-semibold text-indigo-400">
-                                        {testMode === "meaning" ? currentWord.meaning : currentWord.word}
+                            {/* 사용자 입력 필드 (정답 확인 전) */}
+                            {!showAnswer && (
+                                <div className="w-full max-w-xs mt-6 animate-fade-in">
+                                    <Input
+                                        type="text"
+                                        placeholder={testMode === "meaning" ? "뜻을 입력해보세요" : "단어를 입력해보세요"}
+                                        className="text-center h-12 text-lg"
+                                        value={userAnswer}
+                                        onChange={(e) => setUserAnswer(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                                                setShowAnswer(true);
+                                            }
+                                        }}
+                                        autoFocus
+                                    />
+                                    <p className="text-[10px] text-muted-foreground mt-2 text-center">
+                                        엔터 키를 누르면 정답을 확인합니다
                                     </p>
+                                </div>
+                            )}
+
+                            {/* 정답 표시 및 비교 */}
+                            {showAnswer && (
+                                <div className="mt-6 w-full max-w-sm space-y-3 animate-fade-in">
+                                    {/* 내 답안 */}
+                                    <div className="p-4 rounded-xl bg-secondary/50 border border-border/50">
+                                        <p className="text-xs text-muted-foreground mb-1">내가 쓴 답</p>
+                                        <p className={`text-lg font-medium ${userAnswer ? "text-foreground" : "text-muted-foreground italic"}`}>
+                                            {userAnswer || "(비어있음)"}
+                                        </p>
+                                    </div>
+
+                                    {/* 정답 */}
+                                    <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+                                        <p className="text-xs text-indigo-400 mb-1">정답</p>
+                                        <p className="text-xl font-bold text-indigo-400">
+                                            {testMode === "meaning" ? currentWord.meaning : currentWord.word}
+                                        </p>
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -247,26 +286,26 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
                     <div className="pb-6 safe-bottom">
                         {!showAnswer ? (
                             <Button
-                                className="w-full h-14 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-base font-medium"
+                                className="w-full h-14 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-base font-medium transition-all active:scale-[0.98]"
                                 onClick={() => setShowAnswer(true)}
                             >
-                                정답 보기
+                                정답 확인
                             </Button>
                         ) : (
                             <div className="flex gap-3">
                                 <Button
-                                    className="flex-1 h-14 rounded-2xl bg-red-600/90 hover:bg-red-700 text-white text-base font-medium gap-2"
+                                    className="flex-1 h-14 rounded-2xl bg-red-500/10 border-2 border-red-500/50 hover:bg-red-500/20 text-red-500 text-base font-medium gap-2 transition-all active:scale-[0.98]"
                                     onClick={handleWrong}
                                 >
-                                    <X className="w-5 h-5" />
-                                    몰라요
+                                    <XCircle className="w-5 h-5" />
+                                    틀렸어요
                                 </Button>
                                 <Button
-                                    className="flex-1 h-14 rounded-2xl bg-emerald-600/90 hover:bg-emerald-700 text-white text-base font-medium gap-2"
+                                    className="flex-1 h-14 rounded-2xl bg-emerald-500/10 border-2 border-emerald-500/50 hover:bg-emerald-500/20 text-emerald-500 text-base font-medium gap-2 transition-all active:scale-[0.98]"
                                     onClick={handleCorrect}
                                 >
-                                    <Check className="w-5 h-5" />
-                                    알아요
+                                    <Circle className="w-5 h-5" />
+                                    맞았어요
                                 </Button>
                             </div>
                         )}
