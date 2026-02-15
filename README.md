@@ -1,36 +1,43 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📚 VocabMaster (나만의 영단어장)
 
-## Getting Started
+개인 맞춤형 영단어 암기 웹 애플리케이션입니다.
+Next.js와 Supabase를 기반으로 하며, 에빙하우스 망각 곡선 이론을 적용한 복습 주기를 자동으로 관리해줍니다.
 
-First, run the development server:
+## 🚀 주요 기능
+- **단어장**: 엑셀 업로드, Notion 데이터베이스 연동 지원.
+- **학습 모드**: 카드 스와이프, TTS 발음 듣기, 중요 표시.
+- **테스트 모드**: 주관식 입력, 자가 채점 시스템(O/X).
+- **복습 알림**: 학습 단계별(1~6차) 복습 일정 자동 계산 및 대시보드 알림.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🛠️ 기술 스택
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Style**: Tailwind CSS, shadcn/ui
+- **Backend**: Supabase (Auth, DB)
+- **Deploy**: Vercel
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📖 문서 (Documentation)
+> 프로젝트 구조, DB 스키마, 개발 히스토리 등 자세한 내용은 [PROJECT_DOCS.md](./PROJECT_DOCS.md) 문서를 참고해주세요.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🏁 시작하기 (Getting Started)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. 저장소 클론
+   ```bash
+   git clone https://github.com/CODEhenryKIL/English-Word---mobile.git
+   cd English-Word---mobile
+   ```
 
-## Learn More
+2. 패키지 설치
+   ```bash
+   npm install
+   # 또는
+   yarn install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+3. 환경 변수 설정
+   `.env.local` 파일을 생성하고 Supabase 및 Notion API 키를 입력하세요.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. 실행
+   ```bash
+   npm run dev
+   ```
