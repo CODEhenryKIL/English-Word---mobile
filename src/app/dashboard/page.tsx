@@ -24,7 +24,7 @@ import {
 import { MAX_STEPS, getIntervalDays } from "@/lib/spaced-repetition";
 
 // 단계별 간격 라벨
-const STEP_INTERVALS = ["", "+2일", "+1일", "+5일", "+23일", "+180일"];
+const STEP_INTERVALS = ["D-Day", "+2일", "+1일", "+5일", "+23일", "+180일"];
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -199,18 +199,18 @@ export default function DashboardPage() {
                                                 <div
                                                     key={step}
                                                     className={`flex flex-col items-center rounded-lg py-2 px-0.5 transition-all ${isCompleted
-                                                            ? "bg-indigo-500/15"
-                                                            : isNext
-                                                                ? "bg-amber-500/10 ring-1 ring-amber-500/30"
-                                                                : "bg-secondary/30"
+                                                        ? "bg-indigo-500/15"
+                                                        : isNext
+                                                            ? "bg-amber-500/10 ring-1 ring-amber-500/30"
+                                                            : "bg-secondary/30"
                                                         }`}
                                                 >
                                                     {/* 차수 라벨 */}
                                                     <span className={`text-[10px] font-semibold ${isCompleted
-                                                            ? "text-indigo-400"
-                                                            : isNext
-                                                                ? "text-amber-400"
-                                                                : "text-muted-foreground/50"
+                                                        ? "text-indigo-400"
+                                                        : isNext
+                                                            ? "text-amber-400"
+                                                            : "text-muted-foreground/50"
                                                         }`}>
                                                         {step}차
                                                     </span>
