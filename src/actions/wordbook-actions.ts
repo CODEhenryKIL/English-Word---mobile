@@ -1,0 +1,130 @@
+"use server";
+
+import { createClient } from "@/lib/supabase/server";
+import { calculateNextDueDate } from "@/lib/spaced-repetition";
+
+// 단어장 목록 조회
+export async function getWordbooks() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+        .from("wordbooks")
+        .select("*, words(count), study_logs(completed_step, next_due_date)")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("단어장 조회 오류:", error);
+        return [];
+    }
+
+    return data || [];
+}
+
+// 단어장 생성
+export async function createWordbook(title: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "인증되지 않은 사용자입니다." };
+
+    const { data, error } = await supabase
+        .from("wordbooks")
+        .insert({ user_id: user.id, title })
+        .select()
+        .single();
+
+    if (error) return { error: error.message };
+    return { data };
+}
+
+// 단어장에 단어 일괄 추가 (Bulk Insert)
+export async function bulkInsertWords(
+    wordbookId: string,
+    words: {
+        word: string;
+        part_of_speech?: string;
+        meaning: string;
+        pronunciation?: string;
+        root_affix?: string;
+        etymology?: string;
+        memo?: string;
+    }[]
+) {
+    const supabase = await createClient();
+
+    const mappedWords = words.map((w) => ({
+        wordbook_id: wordbookId,
+        word: w.word,
+        part_of_speech: w.part_of_speech || null,
+        meaning: w.meaning,
+        pronunciation: w.pronunciation || null,
+        root_affix: w.root_affix || null,
+        etymology: w.etymology || null,
+        memo: w.memo || null,
+    }));
+
+    // 500개씩 나누어 삽입 (Supabase 제한 대응)
+    const chunkSize = 500;
+    for (let i = 0; i < mappedWords.length; i += chunkSize) {
+        const chunk = mappedWords.slice(i, i + chunkSize);
+        const { error } = await supabase.from("words").insert(chunk);
+        if (error) return { error: error.message };
+    }
+
+    return { success: true, count: mappedWords.length };
+}
+
+// 단어장의 단어 목록 조회
+export async function getWords(wordbookId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("words")
+        .select("*")
+        .eq("wordbook_id", wordbookId);
+
+    if (error) return [];
+    return data || [];
+}
+
+// 단어장 상세 정보 조회
+export async function getWordbook(wordbookId: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from("wordbooks")
+        .select("*")
+        .eq("id", wordbookId)
+        .single();
+
+    if (error) return null;
+    return data;
+}
+
+// 단어 별표(is_starred) 토글
+export async function toggleStarred(wordId: string, isStarred: boolean) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("words")
+        .update({ is_starred: isStarred })
+        .eq("id", wordId);
+
+    if (error) return { error: error.message };
+    return { success: true };
+}
+
+// 단어장 삭제
+export async function deleteWordbook(wordbookId: string) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("wordbooks")
+        .delete()
+        .eq("id", wordbookId);
+
+    if (error) return { error: error.message };
+    return { success: true };
+}
