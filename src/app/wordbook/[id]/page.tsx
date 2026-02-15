@@ -19,6 +19,7 @@ import {
     Loader2,
     BookOpen,
     ClipboardCheck,
+    Volume2,
 } from "lucide-react";
 import { getStepLabel } from "@/lib/spaced-repetition";
 import type { Word, Wordbook } from "@/types/database";
@@ -27,6 +28,18 @@ import { toast } from "sonner";
 
 // 가리기 모드: none(다 보임), word(단어+발음 가림), meaning(의미 가림)
 type HideMode = "none" | "word" | "meaning";
+
+// TTS 발음 재생
+function speakWord(word: string) {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    // 기존 재생 중지
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(word);
+    utterance.lang = "en-US";
+    utterance.rate = 0.85;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
+}
 
 export default function WordbookPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -306,9 +319,33 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                                                     </h2>
 
                                                     {currentWord.pronunciation && (
-                                                        <p className="text-sm text-muted-foreground mb-1">
-                                                            [{currentWord.pronunciation}]
-                                                        </p>
+                                                        <div className="flex items-center justify-center gap-1.5 mb-1">
+                                                            <p className="text-sm text-muted-foreground">
+                                                                [{currentWord.pronunciation}]
+                                                            </p>
+                                                            <button
+                                                                className="p-1 rounded-full hover:bg-indigo-500/10 transition-colors"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    speakWord(currentWord.word);
+                                                                }}
+                                                            >
+                                                                <Volume2 className="w-4 h-4 text-indigo-400" />
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                    {/* 발음기호 없어도 소리 버튼 표시 */}
+                                                    {!currentWord.pronunciation && (
+                                                        <button
+                                                            className="mx-auto p-1.5 rounded-full hover:bg-indigo-500/10 transition-colors mb-1"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                speakWord(currentWord.word);
+                                                            }}
+                                                        >
+                                                            <Volume2 className="w-4 h-4 text-indigo-400" />
+                                                        </button>
                                                     )}
                                                 </div>
 

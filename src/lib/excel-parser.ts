@@ -34,6 +34,7 @@ const COLUMN_MAP: Record<string, keyof ParsedWord> = {
     // 어근
     "어근": "root_affix",
     "어근구성": "root_affix",
+    "구성": "root_affix",
     "rootaffix": "root_affix",
     "root_affix": "root_affix",
     // 어원
