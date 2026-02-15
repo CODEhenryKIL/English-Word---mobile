@@ -223,8 +223,8 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                                 key={tab}
                                 onClick={() => { setSubTab(tab); setCurrentIndex(0); setRevealedIds(new Set()); }}
                                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${subTab === tab
-                                        ? "bg-indigo-500/20 text-indigo-400 ring-1 ring-indigo-500/30"
-                                        : "bg-secondary/50 text-muted-foreground"
+                                    ? "bg-indigo-500/20 text-indigo-400 ring-1 ring-indigo-500/30"
+                                    : "bg-secondary/50 text-muted-foreground"
                                     }`}
                             >
                                 {tab === "all" && `전체 (${words.length})`}
@@ -271,8 +271,8 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                                             >
                                                 <Star
                                                     className={`w-5 h-5 transition-all ${currentWord.is_starred
-                                                            ? "fill-yellow-400 text-yellow-400"
-                                                            : "text-muted-foreground"
+                                                        ? "fill-yellow-400 text-yellow-400"
+                                                        : "text-muted-foreground"
                                                         }`}
                                                 />
                                             </button>
@@ -298,52 +298,53 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                                                 {/* 의미 (적색 필터 적용 대상) */}
                                                 <div
                                                     className={`mt-2 p-4 rounded-xl bg-secondary/30 ${redFilterOn && !revealedIds.has(currentWord.id + "-meaning")
-                                                            ? "red-filter"
-                                                            : ""
+                                                        ? "red-filter"
+                                                        : ""
                                                         }`}
                                                     onClick={() => handleReveal(currentWord.id + "-meaning")}
                                                 >
                                                     <p className="text-lg font-medium">{currentWord.meaning}</p>
                                                 </div>
 
-                                                {/* 어근 */}
-                                                {currentWord.root_affix && (
-                                                    <div
-                                                        className={`mt-3 text-sm text-muted-foreground ${redFilterOn && !revealedIds.has(currentWord.id + "-root")
-                                                                ? "red-filter"
-                                                                : ""
-                                                            }`}
-                                                        onClick={() => handleReveal(currentWord.id + "-root")}
-                                                    >
-                                                        <span className="text-xs text-muted-foreground/60">어근:</span>{" "}
-                                                        {currentWord.root_affix}
-                                                    </div>
-                                                )}
-
-                                                {/* 어원 */}
-                                                {currentWord.etymology && (
-                                                    <div
-                                                        className={`mt-2 text-sm text-muted-foreground ${redFilterOn && !revealedIds.has(currentWord.id + "-etym")
-                                                                ? "red-filter"
-                                                                : ""
-                                                            }`}
-                                                        onClick={() => handleReveal(currentWord.id + "-etym")}
-                                                    >
-                                                        <span className="text-xs text-muted-foreground/60">어원:</span>{" "}
-                                                        {currentWord.etymology}
-                                                    </div>
-                                                )}
-
-                                                {/* 메모 */}
-                                                {currentWord.memo && (
-                                                    <div className="mt-2 text-xs text-muted-foreground/70 italic">
-                                                        💡 {currentWord.memo}
-                                                    </div>
-                                                )}
                                             </div>
                                         </>
                                     )}
                                 </div>
+
+                                {/* 하단 세부 정보 영역 */}
+                                {currentWord && (currentWord.root_affix || currentWord.etymology || currentWord.memo) && (
+                                    <div className="mt-3 rounded-xl bg-card/70 border border-border/20 divide-y divide-border/20 overflow-hidden">
+                                        {/* 어근 구성 */}
+                                        {currentWord.root_affix && (
+                                            <div
+                                                className={`px-4 py-3 ${redFilterOn && !revealedIds.has(currentWord.id + "-root") ? "red-filter" : ""}`}
+                                                onClick={() => handleReveal(currentWord.id + "-root")}
+                                            >
+                                                <p className="text-[10px] font-semibold text-indigo-400/70 uppercase tracking-wider mb-1">어근 구성</p>
+                                                <p className="text-sm text-foreground/80">{currentWord.root_affix}</p>
+                                            </div>
+                                        )}
+
+                                        {/* 어원 설명 */}
+                                        {currentWord.etymology && (
+                                            <div
+                                                className={`px-4 py-3 ${redFilterOn && !revealedIds.has(currentWord.id + "-etym") ? "red-filter" : ""}`}
+                                                onClick={() => handleReveal(currentWord.id + "-etym")}
+                                            >
+                                                <p className="text-[10px] font-semibold text-purple-400/70 uppercase tracking-wider mb-1">어원 설명</p>
+                                                <p className="text-sm text-foreground/80">{currentWord.etymology}</p>
+                                            </div>
+                                        )}
+
+                                        {/* 기타 메모 */}
+                                        {currentWord.memo && (
+                                            <div className="px-4 py-3">
+                                                <p className="text-[10px] font-semibold text-amber-400/70 uppercase tracking-wider mb-1">기타 메모</p>
+                                                <p className="text-sm text-foreground/70 italic">{currentWord.memo}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
                                 {/* 좌우 네비게이션 */}
                                 <div className="flex items-center justify-between mt-4 px-4">
@@ -367,8 +368,8 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                                                 <div
                                                     key={idx}
                                                     className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentIndex
-                                                            ? "bg-indigo-400 w-4"
-                                                            : "bg-muted-foreground/30"
+                                                        ? "bg-indigo-400 w-4"
+                                                        : "bg-muted-foreground/30"
                                                         }`}
                                                 />
                                             );
@@ -396,8 +397,8 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                                 variant={redFilterOn ? "default" : "outline"}
                                 size="sm"
                                 className={`gap-2 rounded-full px-5 ${redFilterOn
-                                        ? "bg-red-600 hover:bg-red-700 text-white"
-                                        : ""
+                                    ? "bg-red-600 hover:bg-red-700 text-white"
+                                    : ""
                                     }`}
                                 onClick={handleToggleRedFilter}
                             >
@@ -412,6 +413,6 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                     </div>
                 </TabsContent>
             </Tabs>
-        </div>
+        </div >
     );
 }

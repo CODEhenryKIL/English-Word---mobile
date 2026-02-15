@@ -227,7 +227,7 @@ function parseMeaningCell(raw: string): { partOfSpeech: string; meaning: string 
     if (!raw) return { partOfSpeech: "", meaning: "" };
 
     // "품사) 의미" 패턴
-    const match = raw.match(/^([가-힣]+)\)\s*(.+)/s);
+    const match = raw.match(/^([가-힣]+)\)\s*(.+)/);
     if (match) {
         const abbr = match[1].trim();
         const meaning = match[2].trim();
