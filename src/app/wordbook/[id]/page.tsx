@@ -278,18 +278,61 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                             </div>
                         ) : (
                             <>
-                                {/* 진행 카운터 */}
-                                <div className="text-center mb-3">
-                                    <span className="text-xs text-muted-foreground">
-                                        <span className="text-indigo-400 font-bold">{currentIndex + 1}</span>
-                                        {" / "}
-                                        {filteredWords.length}
+                                {/* 진행 카운터 (카드 상단 중앙) */}
+                                <div className="flex flex-col items-center mb-4">
+                                    <span className="text-sm font-bold text-indigo-400">
+                                        {currentIndex + 1} <span className="text-muted-foreground font-normal">/ {filteredWords.length}</span>
                                     </span>
+                                    <div className="flex gap-1 mt-1">
+                                        {filteredWords.slice(
+                                            Math.max(0, currentIndex - 2),
+                                            Math.min(filteredWords.length, currentIndex + 3)
+                                        ).map((_, i) => {
+                                            const idx = Math.max(0, currentIndex - 2) + i;
+                                            return (
+                                                <div
+                                                    key={idx}
+                                                    className={`w-1 h-1 rounded-full transition-all ${idx === currentIndex
+                                                        ? "bg-indigo-400 w-3"
+                                                        : "bg-muted-foreground/30"
+                                                        }`}
+                                                />
+                                            );
+                                        })}
+                                    </div>
                                 </div>
+
+                                {/* 좌측 네비게이션 버튼 (화면 고정) */}
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="fixed left-2 top-1/2 -translate-y-1/2 z-50 h-16 w-16 text-muted-foreground/30 hover:text-foreground hover:bg-transparent"
+                                    disabled={currentIndex === 0}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        goPrev();
+                                    }}
+                                >
+                                    <ChevronLeft className="w-10 h-10" />
+                                </Button>
+
+                                {/* 우측 네비게이션 버튼 (화면 고정) */}
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="fixed right-2 top-1/2 -translate-y-1/2 z-50 h-16 w-16 text-muted-foreground/30 hover:text-foreground hover:bg-transparent"
+                                    disabled={currentIndex >= filteredWords.length - 1}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        goNext();
+                                    }}
+                                >
+                                    <ChevronRight className="w-10 h-10" />
+                                </Button>
 
                                 {/* 단어 카드 */}
                                 <div
-                                    className={`swipe-card ${isSwiping ? "swiping" : ""} relative rounded-2xl bg-card/90 backdrop-blur border border-border/30 p-6 min-h-[280px] flex flex-col`}
+                                    className={`swipe-card ${isSwiping ? "swiping" : ""} relative rounded-2xl bg-card/90 backdrop-blur border border-border/30 p-6 min-h-[320px] flex flex-col justify-center`}
                                     style={{ transform: `translateX(${swipeOffset}px)` }}
                                     onTouchStart={handleTouchStart}
                                     onTouchMove={handleTouchMove}
@@ -365,85 +408,44 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                                                     <p className="text-lg font-medium">{currentWord.meaning}</p>
                                                 </div>
                                             </div>
+
+                                            {/* 하단 세부 정보 영역 — 항상 표시 */}
+                                            {currentWord && (currentWord.root_affix || currentWord.etymology || currentWord.memo) && (
+                                                <div
+                                                    className={`mt-3 rounded-xl bg-card/70 border border-border/20 divide-y divide-border/20 overflow-hidden transition-all ${hideExtra && !revealedIds.has(currentWord.id + "-extra") ? "blur-md cursor-pointer" : ""}`}
+                                                    onClick={() => {
+                                                        if (hideExtra && !revealedIds.has(currentWord.id + "-extra")) {
+                                                            handleReveal(currentWord.id + "-extra");
+                                                        }
+                                                    }}
+                                                >
+                                                    {/* 어근 구성 */}
+                                                    {currentWord.root_affix && (
+                                                        <div className="px-4 py-3">
+                                                            <p className="text-[10px] font-semibold text-indigo-400/70 uppercase tracking-wider mb-1">어근 구성</p>
+                                                            <p className="text-sm text-foreground/80">{currentWord.root_affix}</p>
+                                                        </div>
+                                                    )}
+
+                                                    {/* 어원 설명 */}
+                                                    {currentWord.etymology && (
+                                                        <div className="px-4 py-3">
+                                                            <p className="text-[10px] font-semibold text-purple-400/70 uppercase tracking-wider mb-1">어원 설명</p>
+                                                            <p className="text-sm text-foreground/80">{currentWord.etymology}</p>
+                                                        </div>
+                                                    )}
+
+                                                    {/* 기타 메모 */}
+                                                    {currentWord.memo && (
+                                                        <div className="px-4 py-3">
+                                                            <p className="text-[10px] font-semibold text-amber-400/70 uppercase tracking-wider mb-1">기타 메모</p>
+                                                            <p className="text-sm text-foreground/70 italic">{currentWord.memo}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </>
                                     )}
-                                </div>
-
-                                {/* 하단 세부 정보 영역 — 항상 표시 */}
-                                {currentWord && (currentWord.root_affix || currentWord.etymology || currentWord.memo) && (
-                                    <div
-                                        className={`mt-3 rounded-xl bg-card/70 border border-border/20 divide-y divide-border/20 overflow-hidden transition-all ${hideExtra && !revealedIds.has(currentWord.id + "-extra") ? "blur-md cursor-pointer" : ""}`}
-                                        onClick={() => {
-                                            if (hideExtra && !revealedIds.has(currentWord.id + "-extra")) {
-                                                handleReveal(currentWord.id + "-extra");
-                                            }
-                                        }}
-                                    >
-                                        {/* 어근 구성 */}
-                                        {currentWord.root_affix && (
-                                            <div className="px-4 py-3">
-                                                <p className="text-[10px] font-semibold text-indigo-400/70 uppercase tracking-wider mb-1">어근 구성</p>
-                                                <p className="text-sm text-foreground/80">{currentWord.root_affix}</p>
-                                            </div>
-                                        )}
-
-                                        {/* 어원 설명 */}
-                                        {currentWord.etymology && (
-                                            <div className="px-4 py-3">
-                                                <p className="text-[10px] font-semibold text-purple-400/70 uppercase tracking-wider mb-1">어원 설명</p>
-                                                <p className="text-sm text-foreground/80">{currentWord.etymology}</p>
-                                            </div>
-                                        )}
-
-                                        {/* 기타 메모 */}
-                                        {currentWord.memo && (
-                                            <div className="px-4 py-3">
-                                                <p className="text-[10px] font-semibold text-amber-400/70 uppercase tracking-wider mb-1">기타 메모</p>
-                                                <p className="text-sm text-foreground/70 italic">{currentWord.memo}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* 좌우 네비게이션 — 버튼 크게 */}
-                                <div className="flex items-center justify-between mt-5">
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        className="h-16 w-16 rounded-2xl border-border/40"
-                                        disabled={currentIndex === 0}
-                                        onClick={goPrev}
-                                    >
-                                        <ChevronLeft className="w-8 h-8" />
-                                    </Button>
-
-                                    <div className="flex gap-1">
-                                        {filteredWords.slice(
-                                            Math.max(0, currentIndex - 3),
-                                            Math.min(filteredWords.length, currentIndex + 4)
-                                        ).map((_, i) => {
-                                            const idx = Math.max(0, currentIndex - 3) + i;
-                                            return (
-                                                <div
-                                                    key={idx}
-                                                    className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentIndex
-                                                        ? "bg-indigo-400 w-4"
-                                                        : "bg-muted-foreground/30"
-                                                        }`}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-
-                                    <Button
-                                        variant="outline"
-                                        size="icon"
-                                        className="h-16 w-16 rounded-2xl border-border/40"
-                                        disabled={currentIndex >= filteredWords.length - 1}
-                                        onClick={goNext}
-                                    >
-                                        <ChevronRight className="w-8 h-8" />
-                                    </Button>
                                 </div>
                             </>
                         )}

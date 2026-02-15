@@ -222,7 +222,7 @@ export default function TestPage({ params }: { params: Promise<{ id: string }> }
             {!showModeSelector && !testFinished && currentWord && (
                 <div className="flex-1 flex flex-col p-4">
                     {/* 문제 카드 */}
-                    <div className="flex-1 flex flex-col items-center justify-center">
+                    <div className="flex-1 flex flex-col items-center justify-start pt-4 pb-20 overflow-y-auto">
                         <div className="w-full rounded-2xl bg-card/90 backdrop-blur border border-border/30 p-8 text-center min-h-[280px] flex flex-col items-center justify-center">
                             {/* 문제 */}
                             <p className="text-xs text-muted-foreground mb-4">
