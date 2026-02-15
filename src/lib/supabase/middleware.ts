@@ -33,9 +33,16 @@ export async function updateSession(request: NextRequest) {
         data: { user },
     } = await supabase.auth.getUser();
 
+    // getUser()가 null이면 getSession()으로 폴백 (이메일 미확인 사용자 대응)
+    let authenticatedUser = user;
+    if (!authenticatedUser) {
+        const { data: { session } } = await supabase.auth.getSession();
+        authenticatedUser = session?.user ?? null;
+    }
+
     // 비인증 사용자 → 로그인 페이지로 리다이렉트
     if (
-        !user &&
+        !authenticatedUser &&
         !request.nextUrl.pathname.startsWith("/login") &&
         !request.nextUrl.pathname.startsWith("/signup") &&
         !request.nextUrl.pathname.startsWith("/api")
@@ -47,7 +54,7 @@ export async function updateSession(request: NextRequest) {
 
     // 인증된 사용자가 로그인/회원가입 페이지 접근 시 대시보드로
     if (
-        user &&
+        authenticatedUser &&
         (request.nextUrl.pathname.startsWith("/login") ||
             request.nextUrl.pathname.startsWith("/signup"))
     ) {

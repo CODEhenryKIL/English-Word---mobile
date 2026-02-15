@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUserId } from "@/lib/auth-helper";
 import { calculateNextDueDate } from "@/lib/spaced-repetition";
 
 // 학습 완료 처리 및 다음 복습일 계산
@@ -51,10 +52,10 @@ export async function completeStudySession(wordbookId: string) {
 
 // 특정 날짜의 복습 예정 단어장 조회
 export async function getDueWordbooks(date?: string) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+    const userId = await getAuthUserId();
+    if (!userId) return [];
 
+    const supabase = await createClient();
     const targetDate = date || new Date().toISOString().split("T")[0];
 
     const { data, error } = await supabase
@@ -73,10 +74,10 @@ export async function getDueWordbooks(date?: string) {
 
 // 특정 월의 학습 기록 조회 (캘린더용)
 export async function getStudyLogsForMonth(year: number, month: number) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+    const userId = await getAuthUserId();
+    if (!userId) return [];
 
+    const supabase = await createClient();
     const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
     const endDate =
         month === 12

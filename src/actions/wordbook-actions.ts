@@ -1,18 +1,18 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { calculateNextDueDate } from "@/lib/spaced-repetition";
+import { getAuthUserId } from "@/lib/auth-helper";
 
 // 단어장 목록 조회
 export async function getWordbooks() {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
+    const userId = await getAuthUserId();
+    if (!userId) return [];
 
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from("wordbooks")
         .select("*, words(count), study_logs(completed_step, next_due_date)")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
     if (error) {
@@ -25,13 +25,13 @@ export async function getWordbooks() {
 
 // 단어장 생성
 export async function createWordbook(title: string) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: "인증되지 않은 사용자입니다." };
+    const userId = await getAuthUserId();
+    if (!userId) return { error: "인증되지 않은 사용자입니다." };
 
+    const supabase = await createClient();
     const { data, error } = await supabase
         .from("wordbooks")
-        .insert({ user_id: user.id, title })
+        .insert({ user_id: userId, title })
         .select()
         .single();
 
