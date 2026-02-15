@@ -221,9 +221,9 @@ export default function DashboardPage() {
                                                             <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center">
                                                                 <Check className="w-3 h-3 text-white" />
                                                             </div>
-                                                        ) : step <= 5 ? (
+                                                        ) : step <= 6 ? (
                                                             <span className="text-[9px] text-muted-foreground/60">
-                                                                {STEP_INTERVALS[step]}
+                                                                {STEP_INTERVALS[step - 1]}
                                                             </span>
                                                         ) : (
                                                             <span className="text-[9px] text-muted-foreground/40">—</span>
