@@ -145,7 +145,10 @@ export default function DashboardPage() {
                         return (
                             <Card
                                 key={wb.id}
-                                className="relative overflow-hidden border-border/30 bg-card/80 backdrop-blur-sm cursor-pointer active:scale-[0.98] transition-all"
+                                className={`relative overflow-hidden backdrop-blur-sm cursor-pointer active:scale-[0.98] transition-all ${isDueNow
+                                        ? "border-amber-500/50 bg-amber-500/5 ring-1 ring-amber-500/20 shadow-lg shadow-amber-500/10"
+                                        : "border-border/30 bg-card/80"
+                                    }`}
                                 style={{ animationDelay: `${idx * 50}ms` }}
                                 onClick={() => router.push(`/wordbook/${wb.id}`)}
                             >
@@ -156,7 +159,7 @@ export default function DashboardPage() {
                                             <div className="flex items-center gap-2">
                                                 <h3 className="font-semibold text-sm truncate">{wb.title}</h3>
                                                 {isDueNow && (
-                                                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0 shrink-0">
+                                                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0 shrink-0 animate-pulse">
                                                         복습 필요
                                                     </Badge>
                                                 )}
@@ -183,10 +186,10 @@ export default function DashboardPage() {
                                         </Button>
                                     </div>
 
-                                    {/* 학습 단계 표시 (1차 ~ 5차) */}
-                                    <div className="mt-3 grid grid-cols-5 gap-1.5">
+                                    {/* 학습 단계 표시 (1차 ~ 6차) */}
+                                    <div className="mt-3 grid grid-cols-6 gap-1">
                                         {Array.from({ length: MAX_STEPS }, (_, i) => {
-                                            const step = i + 1; // 1~5
+                                            const step = i + 1; // 1~6
                                             const isCompleted = currentStep >= step;
                                             const isNext = currentStep === step - 1 && !isAllDone;
 
@@ -208,8 +211,8 @@ export default function DashboardPage() {
                                                 }
                                             }
 
-                                            // 간격 라벨
-                                            const intervalLabels = ["D-Day", "+1일", "+1일", "+5일", "+180일"];
+                                            // 간격 라벨 (1~5차만, 6차는 빈칸)
+                                            const intervalLabels = ["D-Day", "+1일", "+1일", "+5일", "+180일", ""];
 
                                             return (
                                                 <div
@@ -237,10 +240,12 @@ export default function DashboardPage() {
                                                             <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center">
                                                                 <Check className="w-3 h-3 text-white" />
                                                             </div>
-                                                        ) : (
+                                                        ) : intervalLabels[step - 1] ? (
                                                             <span className="text-[9px] text-muted-foreground/60">
                                                                 {intervalLabels[step - 1]}
                                                             </span>
+                                                        ) : (
+                                                            <span className="text-[9px] text-muted-foreground/30">—</span>
                                                         )}
                                                     </div>
 

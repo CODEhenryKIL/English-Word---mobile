@@ -4,8 +4,8 @@
 // 인덱스 0 = 1차 완료 후 2차까지의 간격
 const INTERVALS = [1, 1, 5, 180];
 
-// 총 학습 차수 (5차까지, 6차는 표시 X)
-export const MAX_STEPS = 5;
+// 총 학습 차수 (6차까지)
+export const MAX_STEPS = 6;
 
 /**
  * 현재 완료된 스텝에 따라 다음 복습까지의 간격(일수)을 반환
