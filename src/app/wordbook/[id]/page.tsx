@@ -20,6 +20,7 @@ import {
     BookOpen,
     ClipboardCheck,
     Volume2,
+    EyeOff,
 } from "lucide-react";
 import { getStepLabel } from "@/lib/spaced-repetition";
 import type { Word, Wordbook } from "@/types/database";
@@ -50,6 +51,7 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
     const [loading, setLoading] = useState(true);
     const [currentIndex, setCurrentIndex] = useState(0);
     const [hideMode, setHideMode] = useState<HideMode>("none");
+    const [hideExtra, setHideExtra] = useState(false);
     const [revealedIds, setRevealedIds] = useState<Set<string>>(new Set());
     const [subTab, setSubTab] = useState<"all" | "starred" | "wrong">("all");
     const [touchStartX, setTouchStartX] = useState(0);
@@ -369,7 +371,14 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
 
                                 {/* 하단 세부 정보 영역 — 항상 표시 */}
                                 {currentWord && (currentWord.root_affix || currentWord.etymology || currentWord.memo) && (
-                                    <div className="mt-3 rounded-xl bg-card/70 border border-border/20 divide-y divide-border/20 overflow-hidden">
+                                    <div
+                                        className={`mt-3 rounded-xl bg-card/70 border border-border/20 divide-y divide-border/20 overflow-hidden transition-all ${hideExtra && !revealedIds.has(currentWord.id + "-extra") ? "blur-md cursor-pointer" : ""}`}
+                                        onClick={() => {
+                                            if (hideExtra && !revealedIds.has(currentWord.id + "-extra")) {
+                                                handleReveal(currentWord.id + "-extra");
+                                            }
+                                        }}
+                                    >
                                         {/* 어근 구성 */}
                                         {currentWord.root_affix && (
                                             <div className="px-4 py-3">
@@ -440,32 +449,47 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                         )}
                     </div>
 
-                    {/* 하단 툴바 — 단어 가리기 / 의미 가리기 버튼 */}
+                    {/* 하단 툴바 — 단어 가리기 / 의미 가리기 / 기타 가리기 버튼 */}
                     <div className="sticky bottom-0 px-4 py-3 bg-background/90 backdrop-blur-xl border-t border-border/30 safe-bottom">
-                        <div className="flex items-center justify-center gap-3">
+                        <div className="flex items-center justify-center gap-2">
                             <Button
                                 variant={hideMode === "word" ? "default" : "outline"}
                                 size="sm"
-                                className={`gap-2 rounded-full px-4 ${hideMode === "word"
+                                className={`gap-1.5 rounded-full px-3 text-xs ${hideMode === "word"
                                     ? "bg-indigo-600 hover:bg-indigo-700 text-white"
                                     : ""
                                     }`}
                                 onClick={() => toggleHideMode("word")}
                             >
-                                <Type className="w-4 h-4" />
-                                단어 가리기
+                                <Type className="w-3.5 h-3.5" />
+                                단어
                             </Button>
                             <Button
                                 variant={hideMode === "meaning" ? "default" : "outline"}
                                 size="sm"
-                                className={`gap-2 rounded-full px-4 ${hideMode === "meaning"
+                                className={`gap-1.5 rounded-full px-3 text-xs ${hideMode === "meaning"
                                     ? "bg-purple-600 hover:bg-purple-700 text-white"
                                     : ""
                                     }`}
                                 onClick={() => toggleHideMode("meaning")}
                             >
-                                <BookA className="w-4 h-4" />
-                                의미 가리기
+                                <BookA className="w-3.5 h-3.5" />
+                                의미
+                            </Button>
+                            <Button
+                                variant={hideExtra ? "default" : "outline"}
+                                size="sm"
+                                className={`gap-1.5 rounded-full px-3 text-xs ${hideExtra
+                                    ? "bg-amber-600 hover:bg-amber-700 text-white"
+                                    : ""
+                                    }`}
+                                onClick={() => {
+                                    setHideExtra(!hideExtra);
+                                    setRevealedIds(new Set());
+                                }}
+                            >
+                                <EyeOff className="w-3.5 h-3.5" />
+                                기타
                             </Button>
                         </div>
                     </div>

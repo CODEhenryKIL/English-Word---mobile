@@ -67,14 +67,27 @@ export default function DashboardPage() {
         return log.created_at ? log.created_at.split("T")[0] : null;
     }
 
-    // 다음 복습 예정일 가져오기
+    // 다음 복습 예정일 계산 (DB의 next_due_date 대신 실시간 계산)
     function getNextDueDate(wordbookId: string): string | null {
         const wbLogs = studyLogs
             .filter((l: any) => l.wordbook_id === wordbookId)
             .sort((a: any, b: any) => b.completed_step - a.completed_step);
 
         if (wbLogs.length === 0) return null;
-        return wbLogs[0]?.next_due_date || null;
+
+        const latestLog = wbLogs[0];
+        const completedStep = latestLog.completed_step;
+        const interval = getIntervalDays(completedStep);
+
+        if (interval <= 0) return null; // 모든 학습 완료
+
+        // 완료일(created_at) + 간격 = 다음 복습일
+        const completionDate = latestLog.created_at ? latestLog.created_at.split("T")[0] : null;
+        if (!completionDate) return null;
+
+        const d = new Date(completionDate + "T00:00:00");
+        d.setDate(d.getDate() + interval);
+        return d.toISOString().split("T")[0];
     }
 
     // 날짜 포맷 (M/D)
@@ -146,8 +159,8 @@ export default function DashboardPage() {
                             <Card
                                 key={wb.id}
                                 className={`relative overflow-hidden backdrop-blur-sm cursor-pointer active:scale-[0.98] transition-all ${isDueNow
-                                        ? "border-amber-500/50 bg-amber-500/5 ring-1 ring-amber-500/20 shadow-lg shadow-amber-500/10"
-                                        : "border-border/30 bg-card/80"
+                                    ? "border-amber-500/50 bg-amber-500/5 ring-1 ring-amber-500/20 shadow-lg shadow-amber-500/10"
+                                    : "border-border/30 bg-card/80"
                                     }`}
                                 style={{ animationDelay: `${idx * 50}ms` }}
                                 onClick={() => router.push(`/wordbook/${wb.id}`)}
