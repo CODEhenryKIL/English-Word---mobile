@@ -216,7 +216,9 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                         <ArrowLeft className="w-4 h-4" />
                     </Button>
                     <div className="flex-1 min-w-0">
-                        <h1 className="text-sm font-semibold truncate">{wordbook?.title}</h1>
+                        <h1 className="text-sm font-semibold truncate">
+                            {wordbook?.title} <span className="text-[10px] text-indigo-400 font-normal">v1.3</span>
+                        </h1>
                         <p className="text-[10px] text-muted-foreground">
                             {getStepLabel(wordbook?.current_step ?? 0)} • {words.length}개 단어
                         </p>
