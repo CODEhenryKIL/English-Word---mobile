@@ -147,13 +147,13 @@ async function tryAsDatabase(
         const words = allResults.map((page: any) => {
             const props = page.properties || {};
             return {
-                word: extractDbPropText(props, ["단어", "영단어", "word", "Word"]),
-                meaning: extractDbPropText(props, ["의미", "뜻", "meaning", "Meaning", "품) 의미"]),
-                part_of_speech: extractDbPropText(props, ["품사", "part_of_speech"]),
-                pronunciation: extractDbPropText(props, ["발음", "발음기호", "pronunciation"]),
-                root_affix: extractDbPropText(props, ["어근", "어근구성", "어근 구성", "root_affix"]),
-                etymology: extractDbPropText(props, ["어원", "어원의미", "어원 의미", "etymology"]),
-                memo: extractDbPropText(props, ["메모", "기타", "memo"]),
+                word: extractDbPropText(props, ["단어", "영단어", "word", "Word", "Name", "이름", "Title"]),
+                meaning: extractDbPropText(props, ["의미", "뜻", "meaning", "Meaning", "품) 의미", "Definition", "한글 의미", "해석"]),
+                part_of_speech: extractDbPropText(props, ["품사", "part_of_speech", "Part of Speech", "POS"]),
+                pronunciation: extractDbPropText(props, ["발음", "발음기호", "pronunciation", "Pronunciation"]),
+                root_affix: extractDbPropText(props, ["어근", "어근구성", "어원구성", "어원 구성", "root_affix", "Root", "Structure"]),
+                etymology: extractDbPropText(props, ["어원", "어원의미", "어원 의미", "etymology", "Etymology", "Origin", "유래"]),
+                memo: extractDbPropText(props, ["메모", "기타", "memo", "Note", "Memo"]),
             };
         }).filter((w) => w.word && w.meaning);
 
@@ -284,27 +284,53 @@ function extractPageId(url: string): string | null {
     return null;
 }
 
-// --- 데이터베이스 프로퍼티에서 텍스트 추출 ---
+// --- 데이터베이스 프로퍼티에서 텍스트 추출 (유연한 매칭) ---
 function extractDbPropText(
     properties: Record<string, any>,
     possibleNames: string[]
 ): string {
-    for (const name of possibleNames) {
-        const prop = properties[name];
-        if (!prop) continue;
+    const propKeys = Object.keys(properties);
 
-        switch (prop.type) {
-            case "title":
-                return prop.title?.map((t: any) => t.plain_text).join("") || "";
-            case "rich_text":
-                return prop.rich_text?.map((t: any) => t.plain_text).join("") || "";
-            case "select":
-                return prop.select?.name || "";
-            case "multi_select":
-                return prop.multi_select?.map((s: any) => s.name).join(", ") || "";
-            default:
-                return "";
+    // 1. 정확한 매칭 시도
+    for (const name of possibleNames) {
+        if (properties[name]) {
+            return getTextFromProp(properties[name]);
         }
     }
+
+    // 2. 유연한 매칭 (공백 제거, 소문자 변환 후 포함 여부 확인)
+    for (const name of possibleNames) {
+        const target = name.replace(/\s+/g, "").toLowerCase();
+
+        const foundKey = propKeys.find(key => {
+            const current = key.replace(/\s+/g, "").toLowerCase();
+            return current === target || current.includes(target) || target.includes(current);
+        });
+
+        if (foundKey) {
+            return getTextFromProp(properties[foundKey]);
+        }
+    }
+
     return "";
+}
+
+// 프로퍼티 타입별 텍스트 추출 헬퍼
+function getTextFromProp(prop: any): string {
+    if (!prop) return "";
+    switch (prop.type) {
+        case "title":
+            return prop.title?.map((t: any) => t.plain_text).join("") || "";
+        case "rich_text":
+            return prop.rich_text?.map((t: any) => t.plain_text).join("") || "";
+        case "select":
+            return prop.select?.name || "";
+        case "multi_select":
+            return prop.multi_select?.map((s: any) => s.name).join(", ") || "";
+        case "formula":
+            if (prop.formula?.type === "string") return prop.formula.string || "";
+            return "";
+        default:
+            return "";
+    }
 }
