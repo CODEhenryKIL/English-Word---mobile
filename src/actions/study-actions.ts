@@ -24,8 +24,7 @@ export async function completeStudySession(wordbookId: string) {
     const now = new Date();
 
     // 다음 복습 예정일 계산
-    const nextDueDate = calculateNextDueDate(now, newStep);
-    const nextDueDateStr = nextDueDate.toISOString().split("T")[0];
+    const nextDueDateStr = calculateNextDueDate(now, newStep);
 
     // study_logs에 기록 추가
     const { error: logError } = await supabase.from("study_logs").insert({

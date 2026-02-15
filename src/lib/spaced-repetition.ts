@@ -1,4 +1,5 @@
 // 간격 반복 스케줄링 로직
+import { formatToLocalDate } from "@/lib/date-utils";
 
 // 복습 간격 (일 단위): 1차→2차: 1일, 2차→3차: 1일, 3차→4차: 5일, 4차→5차: 180일
 // 인덱스 0 = 1차 완료 후 2차까지의 간격
@@ -19,21 +20,29 @@ export function getIntervalDays(completedStep: number): number {
 }
 
 /**
- * 학습 완료 날짜와 스텝을 기반으로 다음 복습 예정일을 계산
+ * 학습 완료 날짜와 스텝을 기반으로 다음 복습 예정일을 계산 (YYYY-MM-DD 반환)
  */
 export function calculateNextDueDate(
-    completionDate: Date,
+    completionDate: Date | string,
     completedStep: number
-): Date {
+): string {
     const intervalDays = getIntervalDays(completedStep);
+
+    // 5차 이후인 경우 멀리 설정
     if (intervalDays <= 0) {
-        const farFuture = new Date(completionDate);
-        farFuture.setFullYear(farFuture.getFullYear() + 10);
-        return farFuture;
+        // 10년 뒤
+        const d = new Date();
+        d.setFullYear(d.getFullYear() + 10);
+        return formatToLocalDate(d);
     }
-    const nextDate = new Date(completionDate);
-    nextDate.setDate(nextDate.getDate() + intervalDays);
-    return nextDate;
+
+    // 날짜 처리: 문자열이든 Date든 로컬 기준 YYYY-MM-DD로 변환
+    const baseDateStr = formatToLocalDate(completionDate);
+    const d = new Date(baseDateStr); // YYYY-MM-DD -> 로컬 00:00
+
+    d.setDate(d.getDate() + intervalDays);
+
+    return formatToLocalDate(d); // 다시 YYYY-MM-DD로 변환
 }
 
 /**

@@ -20,8 +20,11 @@ import {
     GraduationCap,
     Trash2,
     Check,
+    Edit2,
 } from "lucide-react";
 import { MAX_STEPS, getIntervalDays } from "@/lib/spaced-repetition";
+import { formatToLocalDate, getTodayStr } from "@/lib/date-utils";
+import { updateWordbookTitle } from "@/actions/wordbook-actions";
 
 export default function DashboardPage() {
     const router = useRouter();
@@ -57,7 +60,23 @@ export default function DashboardPage() {
         loadData();
     }
 
-    // 단어장의 학습 로그에서 각 차수의 완료 날짜 가져오기
+    async function handleEditTitle(id: string, currentTitle: string) {
+        const newTitle = prompt("단어장 이름을 수정하세요:", currentTitle);
+        if (newTitle === null || newTitle.trim() === "") return;
+
+        if (newTitle.trim() === currentTitle) return;
+
+        const result = await updateWordbookTitle(id, newTitle.trim());
+        if (result.error) {
+            alert(result.error);
+            return;
+        }
+        loadData();
+    }
+
+
+
+    // 단어장 학습 로그에서 각 차수의 완료 날짜 가져오기
     function getStepCompletionDate(wordbookId: string, step: number): string | null {
         const log = studyLogs.find(
             (l: any) => l.wordbook_id === wordbookId && l.completed_step === step
@@ -82,12 +101,13 @@ export default function DashboardPage() {
         if (interval <= 0) return null; // 모든 학습 완료
 
         // 완료일(created_at) + 간격 = 다음 복습일
-        const completionDate = latestLog.created_at ? latestLog.created_at.split("T")[0] : null;
+        // created_at (UTC) -> 로컬 YYYY-MM-DD 변환
+        const completionDate = formatToLocalDate(latestLog.created_at);
         if (!completionDate) return null;
 
-        const d = new Date(completionDate + "T00:00:00");
+        const d = new Date(completionDate);
         d.setDate(d.getDate() + interval);
-        return d.toISOString().split("T")[0];
+        return formatToLocalDate(d);
     }
 
     // 날짜 포맷 (M/D)
@@ -152,7 +172,7 @@ export default function DashboardPage() {
                         const currentStep = wb.current_step || 0;
                         const isAllDone = currentStep >= MAX_STEPS;
                         const nextDue = getNextDueDate(wb.id);
-                        const today = new Date().toISOString().split("T")[0];
+                        const today = getTodayStr(); // 로컬 기준 오늘 날짜
                         const isDueNow = nextDue && nextDue <= today && !isAllDone;
 
                         return (
@@ -196,6 +216,17 @@ export default function DashboardPage() {
                                             }}
                                         >
                                             <Trash2 className="w-3.5 h-3.5" />
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 text-muted-foreground/50 hover:text-indigo-400 shrink-0 -ml-2"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleEditTitle(wb.id, wb.title);
+                                            }}
+                                        >
+                                            <Edit2 className="w-3.5 h-3.5" />
                                         </Button>
                                     </div>
 

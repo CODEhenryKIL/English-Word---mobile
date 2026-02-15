@@ -128,3 +128,21 @@ export async function deleteWordbook(wordbookId: string) {
     if (error) return { error: error.message };
     return { success: true };
 }
+
+// 단어장 이름 변경
+export async function updateWordbookTitle(id: string, newTitle: string) {
+    const userId = await getAuthUserId();
+    if (!userId) return { error: "인증되지 않은 사용자입니다." };
+
+    if (!newTitle.trim()) return { error: "제목을 입력해주세요." };
+
+    const supabase = await createClient();
+    const { error } = await supabase
+        .from("wordbooks")
+        .update({ title: newTitle.trim() })
+        .eq("id", id)
+        .eq("user_id", userId);
+
+    if (error) return { error: error.message };
+    return { success: true };
+}
