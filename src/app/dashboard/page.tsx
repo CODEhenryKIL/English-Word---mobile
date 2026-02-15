@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { getWordbooks } from "@/actions/wordbook-actions";
-import { getStudyLogsForMonth, getDueWordbooks } from "@/actions/study-actions";
+import { getWordbooks, deleteWordbook } from "@/actions/wordbook-actions";
+import { getAllStudyLogs, getDueWordbooks } from "@/actions/study-actions";
 import { signOut } from "@/actions/auth-actions";
 import ExcelUploadModal from "@/components/ExcelUploadModal";
 import NotionImportModal from "@/components/NotionImportModal";
-import CalendarWidget from "@/components/CalendarWidget";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -20,15 +19,17 @@ import {
     Loader2,
     GraduationCap,
     Trash2,
+    Check,
 } from "lucide-react";
-import { deleteWordbook } from "@/actions/wordbook-actions";
-import { getStepLabel } from "@/lib/spaced-repetition";
+import { MAX_STEPS, getIntervalDays } from "@/lib/spaced-repetition";
+
+// 단계별 간격 라벨
+const STEP_INTERVALS = ["", "+2일", "+1일", "+5일", "+23일", "+180일"];
 
 export default function DashboardPage() {
     const router = useRouter();
     const [wordbooks, setWordbooks] = useState<any[]>([]);
     const [studyLogs, setStudyLogs] = useState<any[]>([]);
-    const [dueCount, setDueCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [showExcelModal, setShowExcelModal] = useState(false);
     const [showNotionModal, setShowNotionModal] = useState(false);
@@ -37,16 +38,11 @@ export default function DashboardPage() {
     const loadData = useCallback(async () => {
         setLoading(true);
         try {
-            const [wbs, dues] = await Promise.all([
+            const [wbs, logs] = await Promise.all([
                 getWordbooks(),
-                getDueWordbooks(),
+                getAllStudyLogs(),
             ]);
             setWordbooks(wbs);
-            setDueCount(dues.length);
-
-            // 현재 월의 학습 기록
-            const now = new Date();
-            const logs = await getStudyLogsForMonth(now.getFullYear(), now.getMonth() + 1);
             setStudyLogs(logs);
         } catch (err) {
             console.error("데이터 로드 오류:", err);
@@ -64,12 +60,31 @@ export default function DashboardPage() {
         loadData();
     }
 
-    // 단어장마다 복습 필요 여부 체크
-    function isDue(wordbookId: string): boolean {
-        const today = new Date().toISOString().split("T")[0];
-        return studyLogs.some(
-            (log: any) => log.wordbook_id === wordbookId && log.next_due_date <= today
+    // 단어장의 학습 로그에서 각 차수의 완료 날짜 가져오기
+    function getStepCompletionDate(wordbookId: string, step: number): string | null {
+        const log = studyLogs.find(
+            (l: any) => l.wordbook_id === wordbookId && l.completed_step === step
         );
+        if (!log) return null;
+        // created_at 에서 날짜만 추출
+        return log.created_at ? log.created_at.split("T")[0] : null;
+    }
+
+    // 다음 복습 예정일 가져오기
+    function getNextDueDate(wordbookId: string): string | null {
+        const wbLogs = studyLogs
+            .filter((l: any) => l.wordbook_id === wordbookId)
+            .sort((a: any, b: any) => b.completed_step - a.completed_step);
+
+        if (wbLogs.length === 0) return null;
+        return wbLogs[0]?.next_due_date || null;
+    }
+
+    // 날짜 포맷 (M/D)
+    function formatDate(dateStr: string | null): string {
+        if (!dateStr) return "";
+        const d = new Date(dateStr + "T00:00:00");
+        return `${d.getMonth() + 1}/${d.getDate()}`;
     }
 
     return (
@@ -93,9 +108,6 @@ export default function DashboardPage() {
 
             {/* 본문 */}
             <div className="flex-1 p-4 space-y-4 pb-24">
-                {/* 캘린더 위젯 */}
-                <CalendarWidget studyLogs={studyLogs} dueCount={dueCount} />
-
                 {/* 단어장 목록 헤더 */}
                 <div className="flex items-center justify-between">
                     <h2 className="text-base font-semibold flex items-center gap-2">
@@ -123,11 +135,15 @@ export default function DashboardPage() {
                     </div>
                 )}
 
-                {/* 단어장 카드 그리드 */}
-                <div className="grid grid-cols-1 gap-3">
+                {/* 단어장 카드 리스트 */}
+                <div className="grid grid-cols-1 gap-4">
                     {wordbooks.map((wb: any, idx: number) => {
                         const wordCount = wb.words?.[0]?.count ?? 0;
-                        const due = isDue(wb.id);
+                        const currentStep = wb.current_step || 0;
+                        const isAllDone = currentStep >= MAX_STEPS;
+                        const nextDue = getNextDueDate(wb.id);
+                        const today = new Date().toISOString().split("T")[0];
+                        const isDueNow = nextDue && nextDue <= today && !isAllDone;
 
                         return (
                             <Card
@@ -137,21 +153,25 @@ export default function DashboardPage() {
                                 onClick={() => router.push(`/wordbook/${wb.id}`)}
                             >
                                 <div className="p-4">
-                                    <div className="flex items-start justify-between">
+                                    {/* 타이틀 행 */}
+                                    <div className="flex items-start justify-between mb-1">
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <h3 className="font-semibold text-sm truncate">{wb.title}</h3>
-                                                {due && (
+                                                {isDueNow && (
                                                     <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-[10px] px-1.5 py-0 shrink-0">
                                                         복습 필요
                                                     </Badge>
                                                 )}
+                                                {isAllDone && (
+                                                    <Badge className="bg-green-500/20 text-green-400 border-green-500/30 text-[10px] px-1.5 py-0 shrink-0">
+                                                        완료 ✓
+                                                    </Badge>
+                                                )}
                                             </div>
-                                            <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                                                <span>{wordCount}개 단어</span>
-                                                <span>•</span>
-                                                <span>{getStepLabel(wb.current_step)}</span>
-                                            </div>
+                                            <p className="text-xs text-muted-foreground mt-0.5">
+                                                {wordCount}개 단어
+                                            </p>
                                         </div>
                                         <Button
                                             variant="ghost"
@@ -166,13 +186,66 @@ export default function DashboardPage() {
                                         </Button>
                                     </div>
 
-                                    {/* 진행 바 */}
-                                    <div className="mt-3 h-1 bg-secondary rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full transition-all"
-                                            style={{ width: `${Math.min((wb.current_step / 6) * 100, 100)}%` }}
-                                        />
+                                    {/* 학습 단계 표시 (1차 ~ 6차) */}
+                                    <div className="mt-3 grid grid-cols-6 gap-1">
+                                        {Array.from({ length: MAX_STEPS }, (_, i) => {
+                                            const step = i + 1; // 1~6
+                                            const isCompleted = currentStep >= step;
+                                            const isNext = currentStep === step - 1 && !isAllDone;
+                                            const completionDate = getStepCompletionDate(wb.id, step);
+                                            const nextDueForStep = step <= 5 ? getNextDueDate(wb.id) : null;
+
+                                            return (
+                                                <div
+                                                    key={step}
+                                                    className={`flex flex-col items-center rounded-lg py-2 px-0.5 transition-all ${isCompleted
+                                                            ? "bg-indigo-500/15"
+                                                            : isNext
+                                                                ? "bg-amber-500/10 ring-1 ring-amber-500/30"
+                                                                : "bg-secondary/30"
+                                                        }`}
+                                                >
+                                                    {/* 차수 라벨 */}
+                                                    <span className={`text-[10px] font-semibold ${isCompleted
+                                                            ? "text-indigo-400"
+                                                            : isNext
+                                                                ? "text-amber-400"
+                                                                : "text-muted-foreground/50"
+                                                        }`}>
+                                                        {step}차
+                                                    </span>
+
+                                                    {/* 체크 또는 간격 */}
+                                                    <div className="mt-1 h-6 flex items-center justify-center">
+                                                        {isCompleted ? (
+                                                            <div className="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center">
+                                                                <Check className="w-3 h-3 text-white" />
+                                                            </div>
+                                                        ) : step <= 5 ? (
+                                                            <span className="text-[9px] text-muted-foreground/60">
+                                                                {STEP_INTERVALS[step]}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[9px] text-muted-foreground/40">—</span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* 날짜 */}
+                                                    <span className={`text-[8px] mt-0.5 ${isCompleted ? "text-indigo-400/60" : "text-transparent"
+                                                        }`}>
+                                                        {completionDate ? formatDate(completionDate) : "—"}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
+
+                                    {/* 다음 복습 안내 */}
+                                    {!isAllDone && nextDue && (
+                                        <p className="text-[10px] text-muted-foreground mt-2 text-center">
+                                            다음 복습: <span className={isDueNow ? "text-amber-400 font-semibold" : "text-indigo-400"}>{formatDate(nextDue)}</span>
+                                        </p>
+                                    )}
                                 </div>
                             </Card>
                         );
