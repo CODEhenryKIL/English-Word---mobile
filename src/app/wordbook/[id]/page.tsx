@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
-import { getWordbook, getWords, toggleStarred } from "@/actions/wordbook-actions";
+import { getWordbook, getWords, toggleStarred, updateWord } from "@/actions/wordbook-actions";
 import { completeStudySession } from "@/actions/study-actions";
 import { getWrongAnswerWords } from "@/actions/test-actions";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,19 @@ import {
     ClipboardCheck,
     Volume2,
     EyeOff,
+    Edit2, // 편집 아이콘 추가
+    Plus, // 추가 아이콘
 } from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { getStepLabel } from "@/lib/spaced-repetition";
 import type { Word, Wordbook } from "@/types/database";
 import Link from "next/link";
@@ -57,6 +69,15 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
     const [touchStartX, setTouchStartX] = useState(0);
     const [swipeOffset, setSwipeOffset] = useState(0);
     const [isSwiping, setIsSwiping] = useState(false);
+
+    // 편집 모드 상태
+    const [editOpen, setEditOpen] = useState(false);
+    const [editData, setEditData] = useState<{
+        root_affix: string;
+        etymology: string;
+        memo: string;
+    }>({ root_affix: "", etymology: "", memo: "" });
+    const [saving, setSaving] = useState(false);
 
     const loadData = useCallback(async () => {
         setLoading(true);
@@ -188,6 +209,57 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
             );
             loadData();
         }
+    }
+
+    // 편집 다이얼로그 열기
+    function openEditDialog(e: React.MouseEvent) {
+        e.stopPropagation();
+        if (!currentWord) return;
+        setEditData({
+            root_affix: currentWord.root_affix || "",
+            etymology: currentWord.etymology || "",
+            memo: currentWord.memo || "",
+        });
+        setEditOpen(true);
+    }
+
+    // 단어 정보 저장
+    async function handleSaveEdit() {
+        if (!currentWord) return;
+        setSaving(true);
+        const updates = {
+            root_affix: editData.root_affix || null,
+            etymology: editData.etymology || null,
+            memo: editData.memo || null,
+        };
+
+        // @ts-ignore
+        const result = await updateWord(currentWord.id, updates);
+
+        if (result.error) {
+            toast.error("저장 실패: " + result.error);
+        } else {
+            // 로컬 상태 업데이트
+            setWords((prev) =>
+                prev.map((w) =>
+                    w.id === currentWord.id
+                        ? { ...w, ...updates }
+                        : w
+                )
+            );
+            // 필요한 경우 오답 목록도 업데이트
+            setWrongWords((prev) =>
+                prev.map((w) =>
+                    w.id === currentWord.id
+                        ? { ...w, ...updates }
+                        : w
+                )
+            );
+
+            toast.success("저장되었습니다");
+            setEditOpen(false);
+        }
+        setSaving(false);
     }
 
     if (loading) {
@@ -412,38 +484,64 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                                             </div>
 
                                             {/* 하단 세부 정보 영역 — 항상 표시 */}
-                                            {currentWord && (currentWord.root_affix || currentWord.etymology || currentWord.memo) && (
+                                            {/* 하단 세부 정보 영역 — 항상 표시 & 클릭 시 편집 */}
+                                            {currentWord && (
                                                 <div
-                                                    className={`mt-3 rounded-xl bg-card/70 border border-border/20 divide-y divide-border/20 overflow-hidden transition-all ${hideExtra && !revealedIds.has(currentWord.id + "-extra") ? "blur-md cursor-pointer" : ""}`}
-                                                    onClick={() => {
+                                                    className={`mt-3 rounded-xl bg-card/70 border border-border/20 divide-y divide-border/20 overflow-hidden transition-all group relative ${hideExtra && !revealedIds.has(currentWord.id + "-extra") ? "blur-md cursor-pointer" : ""}`}
+                                                    onClick={(e) => {
                                                         if (hideExtra && !revealedIds.has(currentWord.id + "-extra")) {
                                                             handleReveal(currentWord.id + "-extra");
+                                                        } else {
+                                                            openEditDialog(e);
                                                         }
                                                     }}
                                                 >
+                                                    {/* 편집 버튼 힌트 (우측 상단) */}
+                                                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                                        <Edit2 className="w-4 h-4 text-muted-foreground/50" />
+                                                    </div>
+
                                                     {/* 어근 구성 */}
-                                                    {currentWord.root_affix && (
-                                                        <div className="px-4 py-3">
-                                                            <p className="text-[10px] font-semibold text-indigo-400/70 uppercase tracking-wider mb-1">어근 구성</p>
+                                                    <div className="px-4 py-3 min-h-[60px] cursor-pointer hover:bg-secondary/20 transition-colors">
+                                                        <p className="text-[10px] font-semibold text-indigo-400/70 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                                            어근 구성
+                                                        </p>
+                                                        {currentWord.root_affix ? (
                                                             <p className="text-sm text-foreground/80">{currentWord.root_affix}</p>
-                                                        </div>
-                                                    )}
+                                                        ) : (
+                                                            <p className="text-xs text-muted-foreground/40 flex items-center gap-1">
+                                                                <Plus className="w-3 h-3" /> 내용 추가
+                                                            </p>
+                                                        )}
+                                                    </div>
 
                                                     {/* 어원 설명 */}
-                                                    {currentWord.etymology && (
-                                                        <div className="px-4 py-3">
-                                                            <p className="text-[10px] font-semibold text-purple-400/70 uppercase tracking-wider mb-1">어원 설명</p>
+                                                    <div className="px-4 py-3 min-h-[60px] cursor-pointer hover:bg-secondary/20 transition-colors">
+                                                        <p className="text-[10px] font-semibold text-purple-400/70 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                                            어원 설명
+                                                        </p>
+                                                        {currentWord.etymology ? (
                                                             <p className="text-sm text-foreground/80">{currentWord.etymology}</p>
-                                                        </div>
-                                                    )}
+                                                        ) : (
+                                                            <p className="text-xs text-muted-foreground/40 flex items-center gap-1">
+                                                                <Plus className="w-3 h-3" /> 내용 추가
+                                                            </p>
+                                                        )}
+                                                    </div>
 
                                                     {/* 기타 메모 */}
-                                                    {currentWord.memo && (
-                                                        <div className="px-4 py-3">
-                                                            <p className="text-[10px] font-semibold text-amber-400/70 uppercase tracking-wider mb-1">기타 메모</p>
+                                                    <div className="px-4 py-3 min-h-[60px] cursor-pointer hover:bg-secondary/20 transition-colors">
+                                                        <p className="text-[10px] font-semibold text-amber-400/70 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                                            기타 메모
+                                                        </p>
+                                                        {currentWord.memo ? (
                                                             <p className="text-sm text-foreground/70 italic">{currentWord.memo}</p>
-                                                        </div>
-                                                    )}
+                                                        ) : (
+                                                            <p className="text-xs text-muted-foreground/40 flex items-center gap-1">
+                                                                <Plus className="w-3 h-3" /> 내용 추가
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             )}
                                         </>
@@ -499,6 +597,56 @@ export default function WordbookPage({ params }: { params: Promise<{ id: string 
                     </div>
                 </TabsContent>
             </Tabs>
+
+            {/* 단어 정보 편집 다이얼로그 */}
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+                <DialogContent className="max-w-[90vw] sm:max-w-sm rounded-2xl">
+                    <DialogHeader>
+                        <DialogTitle>단어 정보 수정</DialogTitle>
+                        <DialogDescription>
+                            어원, 어근, 메모를 자유롭게 입력하세요.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="root_affix" className="text-xs text-indigo-400 font-semibold">어근 구성</Label>
+                            <Textarea
+                                id="root_affix"
+                                placeholder="예: pre(미리) + view(보다)"
+                                value={editData.root_affix}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditData({ ...editData, root_affix: e.target.value })}
+                                className="h-20"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="etymology" className="text-xs text-purple-400 font-semibold">어원 설명</Label>
+                            <Textarea
+                                id="etymology"
+                                placeholder="단어의 유래나 암기 팁을 적어보세요"
+                                value={editData.etymology}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditData({ ...editData, etymology: e.target.value })}
+                                className="h-24"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="memo" className="text-xs text-amber-400 font-semibold">기타 메모</Label>
+                            <Textarea
+                                id="memo"
+                                placeholder="자신만의 메모를 남기세요"
+                                value={editData.memo}
+                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditData({ ...editData, memo: e.target.value })}
+                                className="h-20"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setEditOpen(false)}>취소</Button>
+                        <Button onClick={handleSaveEdit} disabled={saving}>
+                            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "저장"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

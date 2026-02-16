@@ -83,10 +83,31 @@ export async function getWords(wordbookId: string) {
     const { data, error } = await supabase
         .from("words")
         .select("*")
-        .eq("wordbook_id", wordbookId);
+        .eq("wordbook_id", wordbookId)
+        .order("created_at", { ascending: true }); // 입력 순서 보장
 
     if (error) return [];
     return data || [];
+}
+
+// 단어 정보 수정 (어원, 메모 등)
+export async function updateWord(
+    wordId: string,
+    updates: {
+        root_affix?: string;
+        etymology?: string;
+        memo?: string;
+    }
+) {
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from("words")
+        .update(updates)
+        .eq("id", wordId);
+
+    if (error) return { error: error.message };
+    return { success: true };
 }
 
 // 단어장 상세 정보 조회
