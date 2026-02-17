@@ -83,10 +83,12 @@ export async function getWords(wordbookId: string) {
     const { data, error } = await supabase
         .from("words")
         .select("*")
-        .eq("wordbook_id", wordbookId)
-        .order("created_at", { ascending: true }); // 입력 순서 보장
+        .eq("wordbook_id", wordbookId);
 
-    if (error) return [];
+    if (error) {
+        console.error("getWords Error:", error);
+        return [];
+    }
     return data || [];
 }
 
